@@ -11,6 +11,10 @@ import java.util.Map;
 public class FliteTrakr {
 	 
 	public static void main(String[] args) throws IOException {
+		// Exit value 1: more than one input argument was provided
+		// Exit value 2: Input data couldn't be read
+		// Exit value 3: Incorrect input connections at first line
+		// Exit value 4: No input data
 
 		List<String> inputCad = new ArrayList<String>();
 		if(args.length==0) {				//Data input through command line
@@ -99,7 +103,7 @@ public class FliteTrakr {
 									System.out.println(qnum + " " + routes.size());
 								}
 								else {
-									if((line.matches("^#\\d+: Find all conenctions from \\D{3} to \\D{3} below \\d+Euros\\!"))) {
+									if((line.matches("^#\\d+: Find all connections from \\D{3} to \\D{3} below \\d+Euros\\!"))) {
 										String qnum = line.split(" ")[0];
 										String src = line.split(" ")[5];
 										String dst = line.split(" ")[7];
@@ -108,8 +112,15 @@ public class FliteTrakr {
 										List<String> routes = getAllConnections(src,dst, connections, 3, Integer.parseInt(amount.substring(0, amount.indexOf("Euros"))));
 										if(routes.isEmpty())
 											System.out.println(qnum + " No such connection found!");
-										else
+										else {
+											routes.sort( (r1,r2) ->{
+												if(Integer.parseInt(r1.substring(r1.lastIndexOf("-")+1))<Integer.parseInt(r2.substring(r2.lastIndexOf("-")+1)) )
+													return -1;
+												else
+													return 1;
+											});
 											System.out.println(qnum + " " + String.join(", ", routes));
+										}
 									}
 								}
 							}
@@ -131,10 +142,18 @@ public class FliteTrakr {
 	
 	
 	private static List<String> readInputTextFile(String fileName) throws IOException {
+		// This function reads a text file and returns its content as a list of strings
+		// Input: Filename as a String
+		// Output: A List of String
 	    return Files.readAllLines(Paths.get(fileName), StandardCharsets.UTF_8);
 	  }
 	
 	public static String[] getConnectionString(String initialString) {
+		// This function checks that the first input line matches the specification and returns the airport connections string
+		// Matching pattern: "Connections: <code-of-departure-airport>-<code-of-arrival-airport>-<price-in-euro>" each connection separated by a comma with an optional space
+		// Input: first line of the file as a String
+		// Output: Array of Strings with each airport connection
+		
 		String[] conns = {};
 		
 		if(initialString.matches("^(Connections: \\D{3}-\\D{3}-\\d+)(,\\s?\\D{3}-\\D{3}-\\d+)*")){
@@ -148,6 +167,12 @@ public class FliteTrakr {
 	}
 	
 	public static Map<String, AirportConnections> getAirportConnections(String[] strconn){
+		// This function loads an array of strings containing all airport connections into a Hash map
+		//     for fast reference. The key is the source airport and the value is an airport connection
+		//     object that contains all its destinations and its prices.
+		// Input: array of airport connection strings
+		// Output: Hashmap of each airport with its destinations
+		
 		Map<String, AirportConnections> conns = new HashMap<String, AirportConnections>();
 		for(int i=0;i<strconn.length;i++) {
 			String src = strconn[i].split("-")[0];
@@ -168,6 +193,10 @@ public class FliteTrakr {
 	}
 	
 	public static Integer getConnectionPrice(String src, String dst, Map<String, AirportConnections> conns) {
+		// This function returns the price of a direct airport connection from source to destination
+		// Input: source airport string, destination airport string and the hashmap of airport connections
+		// Output: price of such connection as an integer. If the connection doesn't exist it returns -1
+		
 		if(conns.containsKey(src)) {
 			AirportConnections tmp = conns.get(src);
 			if(tmp.destinations.contains(dst)) {
@@ -183,6 +212,11 @@ public class FliteTrakr {
 	}
 	
 	public static Integer getPrice(String route, Map<String, AirportConnections> conns) {
+		// The objective of this function is given a traveling route string it will return the price of such. 
+		// The travel route string will be like "<airport>-<airport>-....<airport>"
+		// Input: travel route as a string and hashmap with all airport connections
+		// Output: Price of such route as an integer. It'll return -1 in case that no such route exists
+		
 		int price = 0;
 		String[] airports = route.split("-");
 		
@@ -199,10 +233,14 @@ public class FliteTrakr {
 	}
 
 	public static List<String> getAllConnections(String src, String dst, Map<String, AirportConnections> conns, Integer stopType, Integer stopValue){
+		// This function will return the routes between source and destination that match the specified search condition 
 		// Stop condition type 0: which is the cheapest connection
 		// Stop condition type 1: How many connections with max n stops
 		// Stop condition type 2: How many connections with exact n stops
 		// Stop condition type 3: all connections below n euros
+		// Input: source airport string, destination airport string, hashmap with all airport connections, the search type as an integer and the search condition value as an integer.
+		// Output: It'll return the a list of strings containing all routes that match the search condition
+		
 		List<String> routes = new ArrayList<String>();
 		List<String> openRoutes = new ArrayList<String>();
 		
@@ -212,7 +250,7 @@ public class FliteTrakr {
 			System.out.println("Invalid stop condition type!");
 			return null;
 		}
-		//System.out.println("Starting...");
+		
 		openRoutes.add(src);
 		while(openRoutes.size()>0) {
 			List<String> tmp = new ArrayList<String>(openRoutes);
@@ -283,13 +321,15 @@ public class FliteTrakr {
 				}
 			}
 		}
-		//System.out.println("Search ended!");
+
 		return routes;
 	}
 	
 }
 
+
 class AirportConnections {
+	// Airport connection class that contains the airport name, it's available destinations and the price for each connection
 	String airportName;
 	List<String> destinations;
 	List<Integer> costs;
